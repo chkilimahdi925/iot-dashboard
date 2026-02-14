@@ -1,0 +1,212 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║         🪟 GUIDE WINDOWS + MONGODB ATLAS (CLOUD)                         ║
+║                                                                           ║
+║              Démarrage Rapide en 5 Étapes                                ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 1: Installer Node.js                                              │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    📥 Téléchargez: https://nodejs.org/
+    
+    ✅ Choisissez la version LTS (Long Term Support)
+    ✅ Installez avec les options par défaut
+    ✅ Redémarrez Windows après l'installation
+    
+    Vérification (ouvrir CMD):
+        node --version
+        npm --version
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 2: Créer un Compte MongoDB Atlas (GRATUIT)                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    🌐 Allez sur: https://www.mongodb.com/cloud/atlas
+    
+    1. Cliquez "Try Free" ou "Start Free"
+    2. Créez un compte (ou Google/GitHub)
+    3. Créez un cluster GRATUIT (M0 Sandbox - 512 MB)
+       - Provider: AWS ou Google Cloud
+       - Région: La plus proche (Paris, Frankfurt)
+       - Nom: iot-cluster
+    
+    ⏱️ Attendez 3-5 minutes que le cluster se crée
+    
+    4. Créez un utilisateur de base de données:
+       - Menu: Database Access
+       - Username: iotuser
+       - Password: (notez-le quelque part !)
+       
+    5. Autorisez l'accès réseau:
+       - Menu: Network Access
+       - Add IP Address → Allow Access from Anywhere (0.0.0.0/0)
+    
+    6. Obtenez l'URL de connexion:
+       - Menu: Database
+       - Cliquez "Connect" sur votre cluster
+       - Choisissez "Connect your application"
+       - Copiez l'URL:
+       
+       mongodb+srv://iotuser:VOTRE_PASSWORD@cluster.xxxxx.mongodb.net/?retryWrites=true&w=majority
+       
+    ⚠️ Remplacez <password> par votre mot de passe !
+    ⚠️ Ajoutez /iot_sensors avant le ? :
+       
+       mongodb+srv://iotuser:PASSWORD@cluster.xxxxx.mongodb.net/iot_sensors?retryWrites=true&w=majority
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 3: Configurer le Projet                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Ouvrez le fichier: backend\.env
+       (Clic droit → Ouvrir avec → Bloc-notes)
+    
+    2. Trouvez la ligne qui commence par: MONGODB_URI=
+    
+    3. Remplacez toute la ligne par votre URL MongoDB Atlas:
+    
+       MONGODB_URI=mongodb+srv://iotuser:VotrePassword@cluster.xxxxx.mongodb.net/iot_sensors?retryWrites=true&w=majority
+    
+    4. Sauvegardez le fichier (Ctrl+S)
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 4: Démarrer le Dashboard                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    🚀 DOUBLE-CLIQUEZ SUR: START_ALL.bat
+    
+    Deux fenêtres vont s'ouvrir:
+    
+    Fenêtre 1 (Backend):
+        ✅ MongoDB connecté
+        ✅ Connecté au broker MQTT
+        🚀 Serveur démarré sur http://localhost:3000
+    
+    Fenêtre 2 (Frontend):
+        ✅ Compilation réussie
+        🌐 Application disponible sur http://localhost:4200
+    
+    ⏳ La première fois, l'installation des dépendances peut prendre 
+        quelques minutes. Soyez patient !
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 5: Accéder au Dashboard                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    🌐 Ouvrez votre navigateur (Chrome, Firefox, Edge)
+    
+    👉 Allez sur: http://localhost:4200
+    
+    Vous devriez voir:
+    
+    🏠 Dashboard IoT Multi-Appareils
+    
+    📱 Salon
+       🌡️ Température: 23.5°C
+       💧 Humidité: 45%
+    
+    Les données se mettent à jour automatiquement en temps réel !
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                         ✅ C'EST TERMINÉ !                               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  🎯 PROCHAINES ÉTAPES                                                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Ajouter d'autres capteurs
+       → Ouvrir: backend\config\devices.config.js
+       → Changer: enabled: false → enabled: true
+       → Redémarrer le backend
+    
+    2. Visualiser vos données dans MongoDB Atlas
+       → Allez sur MongoDB Atlas
+       → Database → Browse Collections
+       → Base: iot_sensors
+       → Collection: sensordatas
+    
+    3. Personnaliser votre dashboard
+       → Voir: GUIDE_AJOUT_APPAREILS.md
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  📚 DOCUMENTATION                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    📄 QUICKSTART_WINDOWS.md         → Démarrage rapide
+    📄 WINDOWS_ATLAS_SETUP.md        → Guide complet Windows + Atlas
+    📄 GUIDE_AJOUT_APPAREILS.md      → Ajouter des capteurs
+    📄 README_WINDOWS.md             → Documentation complète Windows
+    📁 examples/                      → Code ESP8266 d'exemple
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  🐛 PROBLÈMES COURANTS                                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ❌ "npm n'est pas reconnu"
+       → Node.js pas installé ou pas dans le PATH
+       → Réinstallez Node.js et redémarrez Windows
+    
+    ❌ Erreur MongoDB "MongooseServerSelectionError"
+       → URL incorrecte dans backend\.env
+       → Vérifiez username/password
+       → Vérifiez Network Access dans Atlas (0.0.0.0/0)
+    
+    ❌ Backend ne démarre pas
+       → Vérifiez que MongoDB Atlas est configuré
+       → Vérifiez le fichier .env
+       → Lisez les erreurs dans la fenêtre backend
+    
+    ❌ Pas de données affichées
+       → Vérifiez que l'ESP8266 envoie des données
+       → Vérifiez que le Raspberry Pi est accessible
+       → Test: ping 172.22.241.241
+    
+    ❌ Port 3000 déjà utilisé
+       → Modifiez PORT=3001 dans backend\.env
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  🔍 VÉRIFICATION                                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ✅ Node.js installé
+    ✅ Compte MongoDB Atlas créé
+    ✅ Cluster MongoDB créé
+    ✅ URL de connexion copiée
+    ✅ Fichier .env configuré
+    ✅ START_ALL.bat exécuté
+    ✅ Backend affiche "MongoDB connecté"
+    ✅ Frontend compile sans erreur
+    ✅ Dashboard accessible sur http://localhost:4200
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🌟 Profitez de votre Dashboard IoT Cloud sur Windows ! 🌟              ║
+║                                                                           ║
+║              Architecture:                                                ║
+║                                                                           ║
+║              ESP8266 (Raspberry Pi)                                       ║
+║                   ↓ MQTT                                                  ║
+║              Backend Node.js (Windows)                                    ║
+║                   ↓ Stockage                                              ║
+║              MongoDB Atlas (Cloud ☁️)                                    ║
+║                   ↓ API + WebSocket                                       ║
+║              Frontend Angular (Windows)                                   ║
+║                   ↓ HTTP                                                  ║
+║              Votre Navigateur 🎉                                          ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝

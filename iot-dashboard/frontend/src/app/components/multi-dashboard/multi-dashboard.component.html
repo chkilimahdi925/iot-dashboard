@@ -1,0 +1,117 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <h1>🏠 Dashboard IoT Multi-Appareils</h1>
+    <div class="header-controls">
+      <select [(ngModel)]="selectedHours" (change)="onHoursChange()" class="time-selector">
+        <option *ngFor="let hours of hoursOptions" [value]="hours">
+          {{ hours }}h
+        </option>
+      </select>
+      <button (click)="refresh()" class="refresh-btn">🔄 Actualiser</button>
+    </div>
+  </header>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="error" class="error-message">
+    ⚠️ {{ error }}
+  </div>
+
+  <!-- Chargement -->
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Chargement des appareils...</p>
+  </div>
+
+  <!-- Grille des appareils -->
+  <div *ngIf="!isLoading && devicesWithData.length > 0" class="devices-grid">
+    <div *ngFor="let deviceData of devicesWithData" class="device-card">
+      <!-- En-tête de la carte -->
+      <div class="device-header" (click)="selectDevice(deviceData.device)">
+        <div class="device-info">
+          <span class="device-icon">{{ deviceData.device.icon }}</span>
+          <div class="device-details">
+            <h3>{{ deviceData.device.name }}</h3>
+            <p class="device-type">{{ deviceData.device.type }} • {{ deviceData.device.location }}</p>
+          </div>
+        </div>
+        <span class="expand-icon">{{ selectedDevice?.id === deviceData.device.id ? '▼' : '▶' }}</span>
+      </div>
+
+      <!-- Données actuelles -->
+      <div class="device-sensors" *ngIf="deviceData.latestData">
+        <div *ngFor="let sensor of deviceData.device.sensors" class="sensor-value">
+          <span class="sensor-icon">{{ sensor.icon }}</span>
+          <div class="sensor-info">
+            <span class="sensor-label">{{ sensor.label }}</span>
+            <span class="sensor-number" 
+                  [style.color]="getValueColor(getValue(deviceData.latestData.data, sensor.key), sensor)">
+              {{ formatValue(getValue(deviceData.latestData.data, sensor.key), sensor.type === 'temperature' ? 1 : 0) }}{{ sensor.unit }}
+            </span>
+          </div>
+        </div>
+        <p class="timestamp">{{ formatDate(deviceData.latestData.timestamp) }}</p>
+      </div>
+
+      <!-- Message si pas de données -->
+      <div *ngIf="!deviceData.latestData" class="no-device-data">
+        <p>⏳ En attente de données...</p>
+      </div>
+
+      <!-- Détails étendus (si sélectionné) -->
+      <div *ngIf="selectedDevice?.id === deviceData.device.id" class="device-details-extended">
+        
+        <!-- Statistiques -->
+        <div class="stats-section" *ngIf="deviceData.stats && deviceData.stats.count > 0">
+          <h4>📊 Statistiques ({{ selectedHours }}h)</h4>
+          <div class="stats-grid">
+            <div *ngFor="let sensorKey of objectKeys(deviceData.stats.sensors)" class="stat-item">
+              <span class="stat-label">{{ deviceData.stats.sensors[sensorKey].label }}:</span>
+              <div class="stat-values">
+                <span class="stat-avg">Moy: {{ formatValue(deviceData.stats.sensors[sensorKey].avg) }}{{ deviceData.stats.sensors[sensorKey].unit }}</span>
+                <span class="stat-range">
+                  Min: {{ formatValue(deviceData.stats.sensors[sensorKey].min) }} | 
+                  Max: {{ formatValue(deviceData.stats.sensors[sensorKey].max) }}
+                </span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Mesures:</span>
+              <span class="stat-value">{{ deviceData.stats.count }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="history-section" *ngIf="deviceData.history.length > 0">
+          <h4>📜 Historique récent</h4>
+          <div class="history-table-container">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Date & Heure</th>
+                  <th *ngFor="let sensor of deviceData.device.sensors">{{ sensor.label }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let data of deviceData.history.slice(-10).reverse()">
+                  <td>{{ formatDate(data.timestamp) }}</td>
+                  <td *ngFor="let sensor of deviceData.device.sensors">
+                    <span [style.color]="getValueColor(getValue(data.data, sensor.key), sensor)">
+                      {{ formatValue(getValue(data.data, sensor.key), sensor.type === 'temperature' ? 1 : 0) }}{{ sensor.unit }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si pas d'appareils -->
+  <div *ngIf="!isLoading && devicesWithData.length === 0 && !error" class="no-devices">
+    <p>😔 Aucun appareil actif</p>
+    <p>Activez des appareils dans <code>backend/config/devices.config.js</code></p>
+  </div>
+</div>

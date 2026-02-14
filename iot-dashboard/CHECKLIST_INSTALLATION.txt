@@ -1,0 +1,231 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    CHECKLIST D'INSTALLATION                              ║
+║                   Cochez au fur et à mesure                              ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOUR 1 : RASPBERRY PI - MQTT BROKER                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    [ ] Connecté au Raspberry Pi
+    [ ] Commande: sudo apt install mosquitto mosquitto-clients
+    [ ] Commande: sudo systemctl enable mosquitto
+    [ ] Commande: sudo systemctl start mosquitto
+    [ ] Fichier créé: /etc/mosquitto/conf.d/custom.conf
+    [ ] Ajouté: listener 1883 et allow_anonymous true
+    [ ] Redémarré: sudo systemctl restart mosquitto
+    [ ] TEST: mosquitto_sub reçoit les messages
+    [ ] Note IP Raspberry: ________________
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOUR 2 : ESP8266 + DHT11 - CAPTEUR                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Branchement:
+    [ ] DHT11 VCC → ESP8266 3.3V (fil rouge)
+    [ ] DHT11 DATA → ESP8266 D4 (fil jaune)
+    [ ] DHT11 GND → ESP8266 GND (fil noir)
+    
+    Arduino IDE:
+    [ ] Arduino IDE installé
+    [ ] URL ESP8266 ajoutée dans Préférences
+    [ ] Package ESP8266 installé (Gestionnaire de cartes)
+    [ ] Bibliothèque "DHT sensor library" installée
+    [ ] Bibliothèque "PubSubClient" installée
+    [ ] Bibliothèque "Adafruit Unified Sensor" installée
+    
+    Code:
+    [ ] Code copié dans Arduino IDE
+    [ ] WIFI_SSID modifié: "Ordio"
+    [ ] WIFI_PASS modifié: "789123456kkk"
+    [ ] MQTT_SERVER modifié avec IP Raspberry: ________________
+    [ ] Code sauvegardé
+    
+    Téléversement:
+    [ ] ESP8266 branché via USB
+    [ ] Carte sélectionnée: NodeMCU 1.0
+    [ ] Port COM sélectionné: COM___
+    [ ] Code compilé sans erreur
+    [ ] Code téléversé avec succès
+    
+    Tests:
+    [ ] Moniteur série ouvert (115200 baud)
+    [ ] Message "WiFi OK" visible
+    [ ] JSON {"temp":__,"hum":__} visible toutes les 3 sec
+    [ ] Sur Raspberry: mosquitto_sub reçoit les messages
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOUR 3 : MQTTX - VISUALISATION                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    [ ] MQTTX téléchargé
+    [ ] MQTTX installé
+    [ ] Nouvelle connexion créée
+    [ ] Host: 172.22.241.241 (IP Raspberry)
+    [ ] Port: 1883
+    [ ] Connexion réussie (point vert)
+    [ ] Souscription créée: home/esp8266/dht11
+    [ ] Messages JSON visibles toutes les 3 sec
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOUR 4 : MONGODB ATLAS - BASE DE DONNÉES CLOUD                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    [ ] Compte créé sur cloud.mongodb.com
+    [ ] Email vérifié
+    [ ] Cluster gratuit (M0) créé
+    [ ] Nom cluster: iot-cluster (ou autre: ________________)
+    [ ] Cluster actif (attendu 1-3 min)
+    
+    Sécurité:
+    [ ] Utilisateur créé (Security → Database Access)
+    [ ] Username: iot_user
+    [ ] Mot de passe noté: ________________________________
+    [ ] Privilèges: Read and write to any database
+    [ ] Network Access configuré (0.0.0.0/0)
+    
+    URI:
+    [ ] URI de connexion copiée
+    [ ] <password> remplacé par vrai mot de passe
+    [ ] /iot_sensors ajouté après .net/
+    [ ] URI complète notée: 
+        mongodb+srv://iot_user:____________@____________.mongodb.net/iot_sensors?retryWrites=true&w=majority
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOUR 5 : BACKEND NODE.JS - SERVEUR                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    [ ] Node.js téléchargé
+    [ ] Node.js installé
+    [ ] PC redémarré
+    [ ] Vérifié: node --version
+    [ ] Vérifié: npm --version
+    
+    Projet:
+    [ ] Archive iot-dashboard-COMPLET.zip extraite
+    [ ] Emplacement: C:\Users\______\iot-dashboard\
+    
+    Configuration:
+    [ ] CMD ouvert dans: backend/
+    [ ] Fichier .env créé (copie de .env.atlas)
+    [ ] MQTT_BROKER modifié: ________________
+    [ ] MONGODB_URI modifié avec URI complète
+    [ ] Fichier .env sauvegardé
+    
+    Installation:
+    [ ] Commande: npm install (attendu 1-2 min)
+    [ ] Installation terminée sans erreur
+    
+    Démarrage:
+    [ ] Commande: npm run start:multi
+    [ ] Message: "✅ MongoDB connecté"
+    [ ] Message: "✅ Connecté au broker MQTT"
+    [ ] Message: "🚀 Serveur démarré sur http://localhost:3000"
+    [ ] Messages: "📥 Données reçues" toutes les 3 sec
+    
+    Vérification MongoDB:
+    [ ] Connexion à cloud.mongodb.com
+    [ ] Database → Browse Collections
+    [ ] Database "iot_sensors" visible
+    [ ] Collection "sensordatas" visible
+    [ ] Documents avec temp et hum visibles
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOUR 6 : FRONTEND ANGULAR - DASHBOARD WEB                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    [ ] Nouveau CMD ouvert (backend toujours actif)
+    [ ] Commande: npm install -g @angular/cli
+    [ ] Angular CLI installé (2-3 min)
+    
+    [ ] CMD dans: frontend/
+    [ ] Commande: npm install (2-3 min)
+    [ ] Installation terminée sans erreur
+    
+    [ ] Commande: ng serve (ou npm start)
+    [ ] Compilation réussie
+    [ ] Message: "listening on localhost:4200"
+    
+    [ ] Navigateur ouvert: http://localhost:4200
+    [ ] Dashboard visible
+    [ ] Carte DHT11 visible
+    [ ] Température affichée: ____°C
+    [ ] Humidité affichée: ____%
+    [ ] Valeurs se mettent à jour automatiquement (3 sec)
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TESTS FINAUX                                                              │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Test de Bout en Bout:
+    [ ] Soufflé sur le DHT11
+    [ ] Moniteur série: température augmente
+    [ ] MQTTX: nouveau message avec temp plus haute
+    [ ] Backend: nouveau "Données reçues"
+    [ ] Dashboard: valeur change EN TEMPS RÉEL
+    [ ] MongoDB Atlas: nouveau document avec temp plus haute
+    
+    Test API REST:
+    [ ] http://localhost:3000/api/devices → JSON visible
+    [ ] http://localhost:3000/api/sensor/latest/esp8266_dht11 → Données
+    [ ] http://localhost:3000/api/sensor/stats/esp8266_dht11 → Stats
+    
+    Test de Résilience:
+    [ ] ESP8266 débranché → Dashboard garde dernières valeurs
+    [ ] ESP8266 rebranché → Dashboard reprend mise à jour
+    [ ] Backend redémarré → Reconnexion automatique
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ VÉRIFICATION FINALE                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    État des Services:
+    [ ] Raspberry Pi - Mosquitto: ACTIF
+    [ ] ESP8266: Envoie des données
+    [ ] MQTTX: Connexion verte + messages
+    [ ] MongoDB Atlas: Cluster actif + données
+    [ ] Backend Node.js: Console "Données reçues"
+    [ ] Frontend Angular: http://localhost:4200 accessible
+    [ ] Dashboard: Mise à jour temps réel fonctionne
+    
+    URLs de Test:
+    [ ] http://localhost:4200 → Dashboard ✅
+    [ ] http://localhost:3000/api/devices → API ✅
+    [ ] https://cloud.mongodb.com → Base de données ✅
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ NOTES PERSONNELLES                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Raspberry Pi IP: ____________________
+    
+    MongoDB Atlas URI:
+    ________________________________________________________________
+    
+    Port COM ESP8266: COM____
+    
+    Problèmes rencontrés:
+    ________________________________________________________________
+    ________________________________________________________________
+    ________________________________________________________________
+    
+    Solutions trouvées:
+    ________________________________________________________________
+    ________________________________________________________________
+    ________________________________________________________________
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ✅ INSTALLATION TERMINÉE !                                              ║
+║                                                                           ║
+║  Votre système IoT est complet et fonctionnel !                          ║
+║  Félicitations ! 🎉                                                      ║
+╚══════════════════════════════════════════════════════════════════════════╝

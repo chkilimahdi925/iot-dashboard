@@ -1,0 +1,937 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║              GUIDE COMPLET IoT - DE A à Z                                ║
+║    DHT11 → ESP8266 → MQTT → MongoDB Atlas → Dashboard Web              ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ARCHITECTURE COMPLÈTE DU SYSTÈME                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────────┐
+    │   DHT11 Capteur  │ → Température & Humidité
+    │   ESP8266        │ → Envoie via WiFi/MQTT
+    └────────┬─────────┘
+             │
+             │ WiFi → MQTT
+             │ Topic: home/esp8266/dht11
+             │ Payload: {"temp":23.5,"hum":45}
+             │
+             ↓
+    ┌──────────────────┐
+    │  Raspberry Pi    │ → Broker MQTT (Mosquitto)
+    │  IP: 172.22.241.241
+    │  Port: 1883      │
+    └────────┬─────────┘
+             │
+             │ MQTT Protocol
+             │
+             ↓
+    ┌──────────────────┐
+    │  Windows PC      │ → Backend Node.js
+    │  Node.js Backend │ → S'abonne au MQTT
+    │                  │ → Sauvegarde dans Atlas
+    └────────┬─────────┘
+             │
+             ├─→ Internet → MongoDB Atlas (Cloud)
+             │
+             └─→ WebSocket → Frontend Angular
+                              ↓
+                         http://localhost:4200
+                         Dashboard Web
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DURÉE TOTALE : 5-6 HEURES                                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ✅ Partie 1 : Raspberry Pi MQTT        → 1h
+    ✅ Partie 2 : ESP8266 + DHT11          → 1h30
+    ✅ Partie 3 : MongoDB Atlas            → 30min
+    ✅ Partie 4 : Backend Node.js          → 1h
+    ✅ Partie 5 : Frontend Angular         → 1h
+    ✅ Tests Finaux                        → 30min
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    PARTIE 1 : RASPBERRY PI                               ║
+║                Configuration Broker MQTT (Mosquitto)                     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 1.1 : Installer Mosquitto sur Raspberry Pi                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Se connecter au Raspberry Pi (SSH ou terminal direct)
+    
+    2. Mettre à jour le système :
+       
+       sudo apt update
+       sudo apt upgrade -y
+    
+    3. Installer Mosquitto :
+       
+       sudo apt install mosquitto mosquitto-clients -y
+    
+    4. Activer le démarrage automatique :
+       
+       sudo systemctl enable mosquitto
+       sudo systemctl start mosquitto
+    
+    ⏱️  Temps : 10 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 1.2 : Configurer Mosquitto                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Éditer le fichier de configuration :
+       
+       sudo nano /etc/mosquitto/mosquitto.conf
+    
+    2. Ajouter ces lignes à la fin :
+       
+       listener 1883
+       allow_anonymous true
+    
+    3. Sauvegarder :
+       Ctrl + O → Entrée → Ctrl + X
+    
+    4. Redémarrer Mosquitto :
+       
+       sudo systemctl restart mosquitto
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST 1.1 : Vérifier que Mosquitto Fonctionne                             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Vérifier le statut :
+       
+       sudo systemctl status mosquitto
+    
+       ✅ Vous devez voir : "active (running)"
+    
+    2. Vérifier l'IP du Raspberry Pi :
+       
+       hostname -I
+    
+       ✅ Noter l'IP (ex: 172.22.241.241)
+    
+    3. Test Publisher/Subscriber :
+       
+       # Terminal 1 (Subscriber)
+       mosquitto_sub -h localhost -t "test/topic" -v
+       
+       # Terminal 2 (Publisher)
+       mosquitto_pub -h localhost -t "test/topic" -m "Hello MQTT"
+    
+       ✅ Terminal 1 doit afficher : test/topic Hello MQTT
+    
+    ⏱️  Temps : 5 minutes
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    PARTIE 2 : ESP8266 + DHT11                            ║
+║                  Programmation et Configuration                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 2.1 : Branchement Physique DHT11 → ESP8266                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Schéma de connexion :
+    
+    DHT11                    ESP8266 (NodeMCU)
+    ┌──────┐                ┌──────────────┐
+    │ VCC  ├────────────────┤ 3.3V         │ (Câble ROUGE)
+    │      │                │              │
+    │ DATA ├────────────────┤ D4 (GPIO2)   │ (Câble JAUNE)
+    │      │                │              │
+    │ GND  ├────────────────┤ GND          │ (Câble NOIR)
+    └──────┘                └──────────────┘
+    
+    ⚠️  IMPORTANT :
+        - Utilisez 3.3V (PAS 5V !)
+        - D4 = GPIO2 sur NodeMCU
+        - Vérifier les connexions avant de brancher l'USB
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 2.2 : Installer Arduino IDE et Bibliothèques                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Télécharger Arduino IDE :
+       https://www.arduino.cc/en/software
+       → Installer version 2.x (dernière)
+    
+    2. Ajouter support ESP8266 :
+       - Ouvrir Arduino IDE
+       - Fichier → Préférences
+       - Dans "URL de gestionnaire de cartes supplémentaires" :
+         
+         http://arduino.esp8266.com/stable/package_esp8266com_index.json
+       
+       - OK
+       - Outils → Type de carte → Gestionnaire de cartes
+       - Rechercher "esp8266"
+       - Installer "esp8266 by ESP8266 Community"
+    
+    3. Installer les bibliothèques :
+       - Outils → Gérer les bibliothèques
+       
+       a) Rechercher "DHT sensor library"
+          → Installer "DHT sensor library" par Adafruit
+          → Cliquer "Install all" pour les dépendances
+       
+       b) Rechercher "PubSubClient"
+          → Installer "PubSubClient" par Nick O'Leary
+    
+    ⏱️  Temps : 15 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 2.3 : Charger Votre Code ESP8266                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Créer un nouveau fichier :
+       - Fichier → Nouveau
+       - Fichier → Enregistrer sous : dht11_mqtt.ino
+    
+    2. Copier votre code complet :
+
+```cpp
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include "DHT.h"
+
+#define DHTPIN D4
+#define DHTTYPE DHT11
+
+const char* WIFI_SSID = "Ordio";
+const char* WIFI_PASS = "789123456kkk";
+const char* MQTT_SERVER = "172.22.241.241"; // IP Raspberry
+const int MQTT_PORT = 1883;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) { 
+    delay(500); 
+    Serial.print("."); 
+  }
+  Serial.println("\nWiFi OK");
+  
+  client.setServer(MQTT_SERVER, MQTT_PORT);
+}
+
+void loop() {
+  while (!client.connected()) {
+    String cid = "esp8266-";
+    cid += String(ESP.getChipId(), HEX);
+    client.connect(cid.c_str());
+    delay(500);
+  }
+  client.loop();
+  
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  
+  if (!isnan(t) && !isnan(h)) {
+    String payload = "{\"temp\":";
+    payload += String(t, 1);
+    payload += ",\"hum\":";
+    payload += String(h, 0);
+    payload += "}";
+    
+    client.publish("home/esp8266/dht11", payload.c_str());
+    Serial.println(payload);
+  }
+  
+  delay(3000);
+}
+```
+
+    3. Vérifier que l'IP est correcte :
+       ⚠️  Ligne 9 : const char* MQTT_SERVER = "172.22.241.241";
+       → Remplacer par l'IP de VOTRE Raspberry Pi si différente
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 2.4 : Configurer et Téléverser                                     │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Brancher l'ESP8266 via USB à votre PC
+    
+    2. Sélectionner la carte :
+       - Outils → Type de carte → NodeMCU 1.0 (ESP-12E Module)
+    
+    3. Sélectionner le port :
+       - Outils → Port → COMx (Windows) ou /dev/ttyUSBx (Linux)
+       
+       Si aucun port n'apparaît :
+       → Installer driver CH340 : https://sparks.gogo.co.nz/ch340.html
+    
+    4. Configurer les paramètres :
+       - Upload Speed : 115200
+       - CPU Frequency : 80 MHz
+       - Flash Size : 4MB
+    
+    5. Compiler et téléverser :
+       - Cliquer sur ✓ (Vérifier) pour compiler
+       - Cliquer sur → (Téléverser) pour uploader
+       
+       ⏱️  Attendre 1-2 minutes
+       
+       ✅ Message final : "Téléversement terminé"
+    
+    ⏱️  Temps : 10 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST 2.1 : Vérifier l'ESP8266                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Ouvrir le Moniteur Série :
+       - Outils → Moniteur série
+       - Configurer : 115200 baud
+    
+    2. Vérifications :
+       
+       ✅ Vous devez voir :
+       .......
+       WiFi OK
+       {"temp":23.5,"hum":45}
+       {"temp":23.5,"hum":45}
+       {"temp":23.6,"hum":45}
+       ...
+    
+    3. Si problème WiFi :
+       → Vérifier SSID et mot de passe
+       → Vérifier que le WiFi est 2.4 GHz (pas 5 GHz)
+    
+    4. Si erreur DHT11 (pas de valeurs) :
+       → Vérifier les connexions physiques
+       → Vérifier que VCC est sur 3.3V
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST 2.2 : Vérifier MQTT sur Raspberry Pi                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Sur le Raspberry Pi :
+    
+    1. S'abonner au topic :
+       
+       mosquitto_sub -h localhost -t "home/esp8266/dht11" -v
+    
+    2. Vérifications :
+       
+       ✅ Vous devez voir (toutes les 3 secondes) :
+       home/esp8266/dht11 {"temp":23.5,"hum":45}
+       home/esp8266/dht11 {"temp":23.6,"hum":45}
+       home/esp8266/dht11 {"temp":23.5,"hum":46}
+    
+    3. Si rien n'apparaît :
+       → Vérifier l'IP du Raspberry dans le code ESP8266
+       → Ping le Raspberry depuis un PC : ping 172.22.241.241
+       → Vérifier firewall du Raspberry
+    
+    ⏱️  Temps : 5 minutes
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    PARTIE 3 : MONGODB ATLAS                              ║
+║                Base de Données Cloud (Gratuite)                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 3.1 : Créer un Compte MongoDB Atlas                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Aller sur : https://www.mongodb.com/cloud/atlas/register
+    
+    2. Créer un compte :
+       - Email
+       - Mot de passe
+       - Accepter les conditions
+       - Sign Up
+    
+    3. Choisir le plan gratuit :
+       - FREE (M0)
+       - Provider : AWS (ou autre)
+       - Région : Choisir proche de vous (ex: Frankfurt pour Europe)
+       - Cluster Name : iot-cluster (ou autre)
+       - Create
+    
+    4. Attendre la création du cluster (2-3 minutes)
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 3.2 : Créer un Utilisateur de Base de Données                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Dans le menu gauche : Security → Database Access
+    
+    2. Cliquer : "+ ADD NEW DATABASE USER"
+    
+    3. Configurer :
+       - Authentication Method : Password
+       - Username : iot_user
+       - Password : Cliquer "Autogenerate Secure Password"
+                    ⚠️  COPIER ET SAUVEGARDER ce mot de passe !
+       
+       Ou choisir votre propre mot de passe :
+       - Password : VotreMotDePasseSecurise123
+    
+    4. Database User Privileges :
+       - Read and write to any database
+    
+    5. Cliquer : "Add User"
+    
+    ⏱️  Temps : 3 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 3.3 : Configurer l'Accès Réseau                                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Dans le menu gauche : Security → Network Access
+    
+    2. Cliquer : "+ ADD IP ADDRESS"
+    
+    3. Choisir : "ALLOW ACCESS FROM ANYWHERE"
+       - IP Address : 0.0.0.0/0 (sera rempli automatiquement)
+       - Description : Accès depuis n'importe où
+    
+    ⚠️  Note : En production, limitez à votre IP spécifique
+    
+    4. Cliquer : "Confirm"
+    
+    ⏱️  Temps : 2 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 3.4 : Obtenir l'URI de Connexion                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Dans le menu gauche : Database → Clusters
+    
+    2. Sur votre cluster, cliquer : "Connect"
+    
+    3. Choisir : "Connect your application"
+    
+    4. Sélectionner :
+       - Driver : Node.js
+       - Version : 4.1 or later
+    
+    5. Copier l'URI de connexion :
+       
+       mongodb+srv://iot_user:<password>@iot-cluster.xxxxx.mongodb.net/
+    
+    6. ⚠️  IMPORTANT : Modifier l'URI :
+       
+       a) Remplacer <password> par votre VRAI mot de passe
+       b) Ajouter /iot_sensors après .net/
+       
+       URI FINALE :
+       mongodb+srv://iot_user:VotreMotDePasse@iot-cluster.abc12.mongodb.net/iot_sensors?retryWrites=true&w=majority
+    
+    7. ⚠️  COPIER ET SAUVEGARDER cette URI complète !
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST 3.1 : Vérifier MongoDB Atlas                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Vérifier que le cluster est actif :
+       - Database → Clusters
+       - Status doit être "Active"
+    
+    2. Vérifier l'utilisateur :
+       - Security → Database Access
+       - Voir "iot_user" dans la liste
+    
+    3. Vérifier Network Access :
+       - Security → Network Access
+       - Voir "0.0.0.0/0" dans la liste
+    
+    ✅ Tout est prêt !
+    
+    ⏱️  Temps : 2 minutes
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    PARTIE 4 : BACKEND NODE.JS                            ║
+║                   Sur Windows PC                                         ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 4.1 : Installer Node.js sur Windows                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Télécharger Node.js :
+       https://nodejs.org/
+       → Choisir LTS (Long Term Support)
+    
+    2. Installer :
+       - Exécuter le fichier .msi
+       - Suivre l'assistant d'installation
+       - Accepter tout par défaut
+    
+    3. Vérifier l'installation :
+       - Ouvrir CMD (Command Prompt)
+       - Taper :
+         
+         node --version
+         npm --version
+       
+       ✅ Vous devez voir les numéros de version
+    
+    ⏱️  Temps : 10 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 4.2 : Préparer le Projet Backend                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Créer un dossier pour le projet :
+       - Par exemple : C:\Users\VotreNom\iot-project\
+    
+    2. Extraire l'archive téléchargée dans ce dossier
+    
+    3. Aller dans le dossier backend :
+       
+       cd C:\Users\VotreNom\iot-project\iot-dashboard\backend
+    
+    4. Installer les dépendances :
+       
+       npm install
+       
+       ⏱️  Attendre 2-3 minutes
+    
+    ✅ Vous devez voir "added XXX packages"
+    
+    ⏱️  Temps : 10 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 4.3 : Configurer le Backend                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Aller dans le dossier backend (si pas déjà fait)
+    
+    2. Copier le fichier de configuration :
+       
+       copy .env.atlas .env
+    
+    3. Éditer le fichier .env :
+       
+       notepad .env
+    
+    4. Modifier ces lignes :
+       
+       MQTT_BROKER=172.22.241.241    ← IP de votre Raspberry Pi
+       
+       MONGODB_URI=mongodb+srv://iot_user:VotreMotDePasse@iot-cluster.abc12.mongodb.net/iot_sensors?retryWrites=true&w=majority
+       ↑ Coller votre URI MongoDB Atlas complète
+    
+    5. Sauvegarder et fermer Notepad
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 4.4 : Démarrer le Backend                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Dans le dossier backend, lancer :
+       
+       npm run start:multi
+    
+    2. Vérifications :
+       
+       ✅ Vous devez voir :
+       ✅ MongoDB connecté
+       ✅ Connecté au broker MQTT
+       📡 Abonné au topic: home/esp8266/dht11
+       🚀 Serveur démarré sur http://localhost:3000
+       📊 Appareils actifs: 1
+          - 🌡️ Capteur Température/Humidité (esp8266_dht11)
+    
+    3. Toutes les 3 secondes, vous devez voir :
+       
+       📥 Données reçues sur home/esp8266/dht11: {temp: 23.5, hum: 45}
+       💾 Données sauvegardées pour Capteur Température/Humidité
+    
+    ⚠️  Si erreur MongoDB :
+        → Vérifier l'URI dans .env
+        → Vérifier le mot de passe (pas d'espaces)
+    
+    ⚠️  Si pas de données MQTT :
+        → Vérifier l'IP du Raspberry dans .env
+        → Vérifier que l'ESP8266 envoie (moniteur série)
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST 4.1 : Vérifier le Backend                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Tester l'API :
+       Ouvrir un navigateur et aller sur :
+       
+       http://localhost:3000/api/devices
+       
+       ✅ Vous devez voir un JSON avec la configuration du DHT11
+    
+    2. Tester les dernières données :
+       
+       http://localhost:3000/api/sensor/latest/esp8266_dht11
+       
+       ✅ Vous devez voir :
+       {
+         "_id": "...",
+         "deviceId": "esp8266_dht11",
+         "deviceType": "DHT11",
+         "data": {
+           "temp": 23.5,
+           "hum": 45
+         },
+         "timestamp": "2024-02-12T..."
+       }
+    
+    3. Vérifier dans MongoDB Atlas :
+       - Aller sur https://cloud.mongodb.com
+       - Database → Browse Collections
+       - Base : iot_sensors
+       - Collection : sensordatas
+       
+       ✅ Vous devez voir vos données !
+    
+    ⏱️  Temps : 5 minutes
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    PARTIE 5 : FRONTEND ANGULAR                           ║
+║                    Sur Windows PC                                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 5.1 : Installer Angular CLI                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Ouvrir un NOUVEAU CMD (Command Prompt)
+    
+    2. Installer Angular CLI globalement :
+       
+       npm install -g @angular/cli
+       
+       ⏱️  Attendre 2-3 minutes
+    
+    3. Vérifier :
+       
+       ng version
+       
+       ✅ Vous devez voir la version d'Angular CLI
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 5.2 : Installer les Dépendances Frontend                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Aller dans le dossier frontend :
+       
+       cd C:\Users\VotreNom\iot-project\iot-dashboard\frontend
+    
+    2. Installer les dépendances :
+       
+       npm install
+       
+       ⏱️  Attendre 3-4 minutes
+    
+    ✅ Vous devez voir "added XXX packages"
+    
+    ⏱️  Temps : 10 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 5.3 : Démarrer le Frontend                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Dans le dossier frontend, lancer :
+       
+       ng serve
+       
+       ⏱️  Attendre 1-2 minutes (première compilation)
+    
+    2. Vérifications :
+       
+       ✅ Vous devez voir :
+       ** Angular Live Development Server is listening on localhost:4200 **
+       ✔ Compiled successfully
+    
+    3. Ouvrir le navigateur :
+       
+       http://localhost:4200
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST 5.1 : Vérifier le Dashboard                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Dans le navigateur (http://localhost:4200) :
+       
+       ✅ Vous devez voir :
+       - Titre : "Dashboard IoT Multi-Appareils"
+       - Une carte avec l'icône 🌡️
+       - "Capteur Température/Humidité"
+       - Température actuelle (ex: 23.5°C)
+       - Humidité actuelle (ex: 45%)
+       - Timestamp de la dernière lecture
+    
+    2. Vérifier la mise à jour temps réel :
+       - Attendre 3 secondes
+       - Les valeurs doivent se mettre à jour automatiquement
+       - Le timestamp change
+    
+    3. Tester les statistiques :
+       - Sélectionner une période (1h, 6h, 24h)
+       - Voir les statistiques (moyenne, min, max)
+    
+    4. Vérifier l'historique :
+       - Cliquer sur la carte du capteur pour l'étendre
+       - Voir le tableau d'historique
+    
+    ⏱️  Temps : 5 minutes
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    TESTS FINAUX COMPLETS                                 ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST GLOBAL 1 : Chaîne Complète                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Vérifier que toute la chaîne fonctionne :
+    
+    1. ✅ ESP8266 : Moniteur série affiche les données
+       {"temp":23.5,"hum":45}
+    
+    2. ✅ MQTT : Raspberry Pi reçoit les messages
+       mosquitto_sub -h localhost -t "home/esp8266/dht11" -v
+    
+    3. ✅ Backend : Console affiche
+       📥 Données reçues...
+       💾 Données sauvegardées...
+    
+    4. ✅ MongoDB Atlas : Données visibles
+       cloud.mongodb.com → Browse Collections
+    
+    5. ✅ Frontend : Dashboard se met à jour
+       http://localhost:4200
+    
+    ⏱️  Temps : 10 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST GLOBAL 2 : Test de Bout en Bout                                     │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Simuler un changement de température :
+    
+    1. Souffler de l'air chaud sur le DHT11
+       (ou le tenir dans votre main)
+    
+    2. Vérifier dans l'ordre :
+       
+       a) Moniteur série ESP8266 :
+          ✅ Température augmente
+       
+       b) Console Backend :
+          ✅ Nouvelles valeurs reçues
+       
+       c) Dashboard Web :
+          ✅ Valeurs se mettent à jour en temps réel
+          ✅ Couleur change si seuil dépassé
+       
+       d) MongoDB Atlas :
+          ✅ Nouvelles entrées dans la collection
+    
+    ⏱️  Temps : 5 minutes
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TEST GLOBAL 3 : Test de Reconnexion                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Vérifier la robustesse du système :
+    
+    1. Débrancher l'ESP8266 de l'USB (couper l'alimentation)
+       ✅ Backend doit continuer à tourner
+       ✅ Frontend doit rester accessible
+    
+    2. Rebrancher l'ESP8266
+       ✅ ESP8266 se reconnecte au WiFi
+       ✅ ESP8266 se reconnecte au MQTT
+       ✅ Données recommencent à arriver
+    
+    3. Arrêter le backend (Ctrl+C)
+       ✅ ESP8266 continue d'envoyer au MQTT
+       ✅ Redémarrer le backend : il récupère les données
+    
+    ⏱️  Temps : 10 minutes
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    RÉSUMÉ COMPLET DU SYSTÈME                             ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ COMPOSANTS INSTALLÉS ET CONFIGURÉS                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ✅ Raspberry Pi
+       - Mosquitto MQTT Broker installé
+       - Écoute sur port 1883
+       - IP: 172.22.241.241
+    
+    ✅ ESP8266 + DHT11
+       - Code téléversé
+       - Connecté au WiFi "Ordio"
+       - Envoie données toutes les 3 secondes
+       - Topic: home/esp8266/dht11
+       - Format: {"temp":23.5,"hum":45}
+    
+    ✅ MongoDB Atlas
+       - Cluster gratuit (M0) créé
+       - Base: iot_sensors
+       - Collection: sensordatas
+       - Accessible depuis partout
+    
+    ✅ Backend Node.js
+       - S'abonne au MQTT
+       - Sauvegarde dans MongoDB Atlas
+       - API REST disponible
+       - WebSocket pour temps réel
+       - Port: 3000
+    
+    ✅ Frontend Angular
+       - Dashboard moderne
+       - Mise à jour temps réel
+       - Statistiques et historique
+       - Port: 4200
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ URLS D'ACCÈS                                                              │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    🌐 Dashboard Web       : http://localhost:4200
+    🔌 API Backend        : http://localhost:3000
+    📊 API Devices        : http://localhost:3000/api/devices
+    📈 API Latest Data    : http://localhost:3000/api/sensor/latest/esp8266_dht11
+    ☁️  MongoDB Atlas      : https://cloud.mongodb.com
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DÉMARRAGE QUOTIDIEN                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. ESP8266 :
+       → Déjà programmé, il démarre automatiquement quand branché
+    
+    2. Raspberry Pi :
+       → Mosquitto démarre automatiquement au boot
+    
+    3. Backend (Windows) :
+       cd C:\...\iot-dashboard\backend
+       npm run start:multi
+    
+    4. Frontend (Windows) :
+       cd C:\...\iot-dashboard\frontend
+       ng serve
+    
+    5. Navigateur :
+       http://localhost:4200
+    
+    📝 Ou utilisez le script : start-windows.bat
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ CHECKLIST FINALE                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Raspberry Pi :
+    [ ] Mosquitto installé et actif
+    [ ] IP notée : _________________
+    
+    ESP8266 :
+    [ ] DHT11 branché correctement
+    [ ] Code téléversé
+    [ ] Moniteur série affiche les données
+    [ ] MQTT fonctionne (test mosquitto_sub)
+    
+    MongoDB Atlas :
+    [ ] Compte créé
+    [ ] Cluster M0 créé
+    [ ] Utilisateur créé
+    [ ] Network Access configuré
+    [ ] URI copiée et sauvegardée
+    
+    Backend :
+    [ ] Node.js installé
+    [ ] Dépendances installées (npm install)
+    [ ] Fichier .env configuré
+    [ ] Backend démarre sans erreur
+    [ ] Console affiche réception données
+    [ ] API testée dans navigateur
+    
+    Frontend :
+    [ ] Angular CLI installé
+    [ ] Dépendances installées (npm install)
+    [ ] Frontend compile sans erreur
+    [ ] Dashboard accessible
+    [ ] Données affichées
+    [ ] Mise à jour temps réel fonctionne
+    
+    Tests Globaux :
+    [ ] Chaîne complète ESP → MQTT → Backend → Atlas → Frontend
+    [ ] Données se mettent à jour toutes les 3 secondes
+    [ ] Statistiques correctes
+    [ ] Historique visible
+    [ ] Reconnexion automatique testée
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    🎉 FÉLICITATIONS ! 🎉                                 ║
+║                                                                           ║
+║    Votre système IoT complet est opérationnel !                          ║
+║                                                                           ║
+║    ESP8266 → MQTT → MongoDB Atlas → Dashboard Web                        ║
+║                                                                           ║
+║    Profitez de votre tableau de bord temps réel !                        ║
+╚══════════════════════════════════════════════════════════════════════════╝

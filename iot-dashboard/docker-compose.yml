@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: iot-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=iot_sensors
+    networks:
+      - iot-network
+    restart: unless-stopped
+
+  # Node.js Backend
+  backend:
+    build: ./backend
+    container_name: iot-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/iot_sensors
+      - MQTT_BROKER=172.22.241.241
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=home/esp8266/dht11
+      - PORT=3000
+    depends_on:
+      - mongodb
+    networks:
+      - iot-network
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # Angular Frontend (optionnel, pour production)
+  # Pour le développement, utilisez 'ng serve' localement
+  # frontend:
+  #   build: ./frontend
+  #   container_name: iot-frontend
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - iot-network
+  #   restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  iot-network:
+    driver: bridge

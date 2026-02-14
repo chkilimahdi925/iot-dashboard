@@ -1,0 +1,289 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                GUIDE RAPIDE - WINDOWS + MONGODB ATLAS                    ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 1: PRÉREQUIS                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ✅ Installer Node.js v18+
+       https://nodejs.org/ → Télécharger LTS
+
+    ✅ Vérifier l'installation:
+       Ouvrir CMD et taper:
+       
+       node --version
+       npm --version
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 2: CONFIGURER MONGODB ATLAS (Gratuit)                             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Créer un compte sur https://cloud.mongodb.com
+    
+    2. Créer un cluster gratuit (M0):
+       - Cliquez "Build a Database"
+       - Choisissez FREE (M0)
+       - Sélectionnez une région proche
+       - Attendez 2-3 minutes
+    
+    3. Créer un utilisateur:
+       Security > Database Access > Add New Database User
+       - Username: iot_user
+       - Password: (notez-le bien!)
+       - Privileges: Read and write to any database
+    
+    4. Configurer Network Access:
+       Security > Network Access > Add IP Address
+       - Choisissez "ALLOW ACCESS FROM ANYWHERE"
+       - IP: 0.0.0.0/0
+    
+    5. Obtenir l'URI de connexion:
+       Database > Clusters > Connect > Connect your application
+       - Copiez l'URI (ressemble à):
+       
+       mongodb+srv://iot_user:<password>@cluster.xxxxx.mongodb.net/
+       
+       - Remplacez <password> par votre vrai mot de passe
+       - Ajoutez /iot_sensors à la fin
+       
+       Exemple final:
+       mongodb+srv://iot_user:MonPass123@cluster0.abc.mongodb.net/iot_sensors?retryWrites=true&w=majority
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 3: INSTALLATION DU PROJET                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Extraire l'archive dans un dossier:
+       Par exemple: C:\Users\VotreNom\iot-dashboard
+    
+    2. Ouvrir CMD (Command Prompt)
+    
+    3. Installer les dépendances Backend:
+       
+       cd C:\Users\VotreNom\iot-dashboard\backend
+       npm install
+    
+    4. Installer Angular CLI:
+       
+       npm install -g @angular/cli
+    
+    5. Installer les dépendances Frontend:
+       
+       cd ..\frontend
+       npm install
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 4: CONFIGURATION                                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Aller dans le dossier backend:
+       
+       cd C:\Users\VotreNom\iot-dashboard\backend
+    
+    2. Copier le fichier de configuration Atlas:
+       
+       copy .env.atlas .env
+    
+    3. Éditer le fichier .env avec Notepad:
+       
+       notepad .env
+    
+    4. Remplacer la ligne MONGODB_URI avec votre vraie URI Atlas:
+       
+       MONGODB_URI=mongodb+srv://iot_user:VotreVraiMotDePasse@cluster0.abc.mongodb.net/iot_sensors?retryWrites=true&w=majority
+    
+    5. Vérifier l'IP de votre Raspberry Pi (MQTT):
+       
+       MQTT_BROKER=172.22.241.241
+    
+    6. Sauvegarder et fermer Notepad
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 5: DÉMARRAGE (3 MÉTHODES)                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    MÉTHODE 1: Script Automatique (.bat) ⭐ RECOMMANDÉ
+    ─────────────────────────────────────────────────
+    
+    Double-cliquez sur:
+    
+        start-windows.bat
+    
+    Tout démarre automatiquement !
+
+
+    MÉTHODE 2: Script PowerShell
+    ────────────────────────────
+    
+    Clic-droit sur start-windows.ps1 > Exécuter avec PowerShell
+    
+    (Si erreur de sécurité, ouvrir PowerShell et taper:)
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+
+    MÉTHODE 3: Manuel (2 fenêtres CMD)
+    ──────────────────────────────────
+    
+    Fenêtre CMD 1 - Backend:
+        cd backend
+        npm start
+    
+    Fenêtre CMD 2 - Frontend:
+        cd frontend
+        ng serve
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ÉTAPE 6: ACCÉDER AU DASHBOARD                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Le navigateur s'ouvre automatiquement sur:
+    
+        http://localhost:4200
+    
+    Vous devriez voir:
+    - 🌡️ Capteur Température/Humidité
+    - Les données en temps réel de votre DHT11
+    
+    API Backend:
+        http://localhost:3000
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ VÉRIFICATIONS                                                             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ✅ Backend démarre et affiche:
+       ✅ MongoDB connecté
+       ✅ Connecté au broker MQTT
+       📡 Abonné au topic: home/esp8266/dht11
+       🚀 Serveur démarré sur http://localhost:3000
+    
+    ✅ Frontend compile sans erreur
+    
+    ✅ Dashboard affiche les données DHT11
+    
+    ✅ Les données se mettent à jour automatiquement
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DÉPANNAGE WINDOWS                                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    ❌ "node n'est pas reconnu"
+       → Installez Node.js depuis https://nodejs.org/
+       → Redémarrez le CMD après installation
+    
+    ❌ "ng n'est pas reconnu"
+       → Installez Angular CLI: npm install -g @angular/cli
+       → Redémarrez le CMD
+    
+    ❌ Backend: "MongoServerError: bad auth"
+       → Vérifiez le mot de passe dans .env
+       → Assurez-vous qu'il n'y a pas d'espaces
+       → Essayez d'encoder les caractères spéciaux
+    
+    ❌ Backend: "Connection timeout"
+       → Vérifiez Network Access dans Atlas (0.0.0.0/0)
+       → Attendez 2-3 minutes après création du cluster
+    
+    ❌ Port 3000 déjà utilisé
+       → Changez le PORT dans .env
+       → Exemple: PORT=3001
+    
+    ❌ Scripts PowerShell désactivés
+       → Ouvrir PowerShell en admin
+       → Set-ExecutionPolicy RemoteSigned
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ VOIR LES DONNÉES DANS MONGODB ATLAS                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    1. Allez sur https://cloud.mongodb.com
+    
+    2. Database > Browse Collections
+    
+    3. Vous verrez:
+       - Base de données: iot_sensors
+       - Collection: sensordatas
+       - Documents: vos données DHT11
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ AJOUTER D'AUTRES CAPTEURS PLUS TARD                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Quand vous voudrez ajouter un capteur (ex: Gaz, Mouvement):
+    
+    1. Éditez: backend\config\devices.config.js
+    
+    2. Trouvez l'appareil et changez:
+       enabled: false  →  enabled: true
+    
+    3. Redémarrez le backend
+    
+    Le nouveau capteur apparaît automatiquement !
+    
+    Voir: GUIDE_AJOUT_APPAREILS.md pour les détails
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DÉMARRAGE QUOTIDIEN                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+    Chaque jour:
+    
+    1. Double-cliquez sur: start-windows.bat
+    
+    2. Attendez que le navigateur s'ouvre
+    
+    3. Profitez de votre dashboard !
+    
+    Pour arrêter:
+    
+    - Fermez les fenêtres CMD "Backend" et "Frontend"
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ✅ CHECKLIST FINALE                                                     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+    [ ] Node.js installé et vérifié
+    [ ] Compte MongoDB Atlas créé
+    [ ] Cluster gratuit (M0) créé
+    [ ] Utilisateur de base de données créé
+    [ ] Network Access configuré (0.0.0.0/0)
+    [ ] URI de connexion copiée
+    [ ] Projet extrait dans un dossier
+    [ ] Backend: npm install terminé
+    [ ] Frontend: npm install terminé
+    [ ] Angular CLI installé globalement
+    [ ] Fichier .env configuré avec URI Atlas
+    [ ] IP du Raspberry Pi correcte dans .env
+    [ ] start-windows.bat fonctionne
+    [ ] Dashboard accessible sur localhost:4200
+    [ ] Données DHT11 affichées
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🎉 FÉLICITATIONS !                                                      ║
+║                                                                           ║
+║  Votre Dashboard IoT fonctionne sur Windows avec MongoDB Atlas Cloud !   ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+
+📚 DOCUMENTATION COMPLÈTE:
+
+    - INSTALLATION_WINDOWS_ATLAS.md → Guide détaillé étape par étape
+    - GUIDE_AJOUT_APPAREILS.md → Ajouter d'autres capteurs
+    - README_MULTI.md → Documentation technique
+
+🆘 BESOIN D'AIDE ?
+
+    Consultez: INSTALLATION_WINDOWS_ATLAS.md
