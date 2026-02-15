@@ -1,3 +1,4 @@
+const { LRUCache } = require('lru-cache');
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
@@ -14,7 +15,7 @@ const server = http.createServer(app);
 // ════════════════════════════════════════════════════════════
 // CACHE LRU POUR DÉDUPLICATION
 // ════════════════════════════════════════════════════════════
-const msgCache = new LRU({
+const msgCache = new LRUCache({
   max: 1000,              // Garde 1000 derniers msgId
   ttl: 1000 * 60 * 10     // 10 minutes de durée de vie
 });
