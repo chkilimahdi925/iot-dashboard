@@ -63,13 +63,13 @@ export interface RealtimeData {
   providedIn: 'root'
 })
 export class SensorService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = 'https://iot-backend-8lkm.onrender.com/api';
   private socket: Socket;
   private realtimeDataSubject = new Subject<RealtimeData>();
 
   constructor(private http: HttpClient) {
     // Initialiser la connexion WebSocket
-    this.socket = io('http://localhost:3000');
+    this.socket = io('https://iot-backend-8lkm.onrender.com');
     
     this.socket.on('newSensorData', (data: RealtimeData) => {
       console.log('Nouvelles données reçues via WebSocket:', data);
