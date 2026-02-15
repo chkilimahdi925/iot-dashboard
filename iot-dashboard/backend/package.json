@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Backend pour collecter et exposer les données DHT11 via MQTT et MongoDB",
   "main": "server.js",
-  "scripts": {
-    "start": "node server-multi.js",
-    "start:multi": "node server-multi.js",
-    "dev": "nodemon server.js"
-  },
+"scripts": {
+  "start": "node server-final-dedup.js",
+  "start:multi": "node server-final-dedup.js",
+  "dev": "nodemon server.js"
+},
   "dependencies": {
     "lru-cache": "^10.0.0",
     "express": "^4.18.2",
