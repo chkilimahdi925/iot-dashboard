@@ -1,4 +1,3 @@
-{
   "name": "iot-mqtt-backend-hybrid",
   "version": "2.0.0",
   "description": "Backend hybride IoT avec déduplication LRU - Raspberry Pi + HiveMQ Cloud",
