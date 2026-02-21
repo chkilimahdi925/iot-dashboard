@@ -71,10 +71,14 @@ export class SensorService {
     // Initialiser la connexion WebSocket
     this.socket = io('https://iot-backend-8lkm.onrender.com');
     
-    this.socket.on('newSensorData', (data: RealtimeData) => {
+    this.socket.on('sensor-data', (data: RealtimeData) => {
+  console.log('Temps réel reçu:', data);
+  this.realtimeDataSubject.next(data);
+});
+   /* this.socket.on('newSensorData', (data: RealtimeData) => {
       console.log('Nouvelles données reçues via WebSocket:', data);
       this.realtimeDataSubject.next(data);
-    });
+    });*/
 
     this.socket.on('connect', () => {
       console.log('✅ Connecté au serveur WebSocket');
